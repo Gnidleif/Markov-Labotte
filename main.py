@@ -1,37 +1,50 @@
-import re
+import re, os
 from random import randint
 
+alphas = re.compile(r'([.!?:;,]+)')
+
 def makeChain(words):
-    rgx = re.compile(r'[^A-Za-z]')
-    keys = [rgx.sub('', key) for key in words.split(' ')]
+    keys = (' '.join(alphas.split(words))).split()
 
     chain = {
-        "START": [keys[0]]
+        "START": [keys[0]],
+        "END": []
     }
+
     for i in range(len(keys)-1):
+        word = keys[i+1]
         if keys[i] not in chain:
             chain[keys[i]] = []
-        if i+1 >= len(keys):
-            break
-        chain[keys[i]].append(keys[i+1])
-
+        if alphas.match(keys[i]):
+            chain["START"].append(word)
+            chain["END"].append(keys[i])
+        chain[keys[i]].append(word)
+    
     return chain
 
 def generate(chain, length):
     key = "START"
-    sentence = []
+    sentence = ""
     while(len(sentence) < length):
         word = chain[key][randint(0, len(chain[key]) - 1)]
-        sentence.append(word)
+        if not alphas.match(word):
+            sentence += " " + word
+        else:
+            sentence += word
         key = word
-        if key not in chain:
-            key = "START"
-    return ' '.join(sentence)
+        if key not in chain or len(chain[key]) == 0:
+            key = "END" if len(chain["END"]) > 0 else "START"
+
+    return sentence
 
 def run(args):
-    words = "hi my name is Banana and I live in a box that I like very much and I can live there as long as I want"
+    path = os.path.abspath(__file__)
+    scr_name = os.path.basename(__file__)
+    with open(path.replace(scr_name, "words.txt"), 'r', encoding="utf-8") as f:
+        words = f.read()
+
     chain = makeChain(words)
-    sentence = generate(chain, 30)
+    sentence = generate(chain, 500)
     print(sentence)
 
 if __name__ == "__main__":
