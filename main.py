@@ -1,7 +1,9 @@
 import re, os
 from random import randint
 
-ALPHAS = re.compile(r'([.!?:;,]+)')
+DEFAULT_FILENAME = "lamotte.txt"
+DEFAULT_WORDCOUNT = 30
+DEFAULT_PRECISION = 1
 
 '''
 todo:
@@ -36,27 +38,26 @@ class MarkovChain:
 
     def generate(self, length):
         key = "START"
-        count = 0
-        output = ""
-        while(count < length):
+        output = []
+        while(len(output) < length):
             word = self.chain[key][randint(0, len(self.chain[key]) - 1)]
 
             # makes sure there's no spacing before an alpha
             if not self.alphas.match(word):
-                output += " " + word
+                output.append(" " + word)
             else:
-                if count / length >= 0.75:
-                    break
-                output += word
+                output.append(word)
 
             key = word
             # handles edge cases where the encountered word isn't in the chain
             # or the provided word doesn't have any associated follow ups
             if key not in self.chain or len(self.chain[key]) == 0:
                 key = "END" if len(self.chain["END"]) > 0 else "START"
-            count += 1
 
-        return output[1:]
+        result = ''.join(output)
+        if re.match(r'^[\W]', result):
+            result = result[1:]
+        return result
 
 def run(args):
     if args is None:
@@ -65,23 +66,38 @@ def run(args):
     if type(args) is not list:
         args = [args]
 
-    filename = args[0] if len(args) >= 1 else "lamotte.txt"
-    wordcount = int(args[1]) if len(args) >= 2 else 30
-    precision = int(args[2]) if len(args) >= 3 else 1
+    try:
+        wordcount = int(args[1]) if len(args) >= 2 else DEFAULT_WORDCOUNT
+        if wordcount <= 0:
+            wordcount = DEFAULT_WORDCOUNT
+    except ValueError as ve:
+        print("ValueError ({}) caught, setting wordcount to {}".format(ve, DEFAULT_WORDCOUNT))
+        wordcount = DEFAULT_WORDCOUNT
 
-    words = readFile(filename)
+    try:
+        precision = int(args[2]) if len(args) >= 3 else DEFAULT_PRECISION
+        if precision <= 0:
+            precision = DEFAULT_PRECISION
+    except ValueError as ve:
+        print("ValueError ({}) caught, setting precision to {}}".format(ve, DEFAULT_PRECISION))
+        precision = DEFAULT_PRECISION
+
+    filename = args[0] if len(args) >= 1 else DEFAULT_FILENAME
+    try:
+        words = readFile(filename)
+    except FileNotFoundError as fne:
+        print("FileNotFoundError ({}) caught, setting filename to {}".format(fne, DEFAULT_FILENAME))
+        words = readFile(DEFAULT_FILENAME)
+
     chain = MarkovChain(words, precision)
-    print(chain.generate(wordcount))
+    result = chain.generate(wordcount)
+    print("text containing {} words generated with {} precision:\n{}".format(wordcount, precision, result))
 
 def readFile(filename):
     path = os.path.abspath(__file__)
     scr_name = os.path.basename(__file__)
-    try:
-        with open(path.replace(scr_name, filename), 'r', encoding="utf-8") as f:
-            words = f.read()
-    except FileNotFoundError as fne:
-        print("File error: {0}".format(fne))
-        raise
+    with open(path.replace(scr_name, filename), 'r', encoding="utf-8") as f:
+        words = f.read()
     return words
 
 if __name__ == "__main__":
