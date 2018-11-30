@@ -49,12 +49,11 @@ class MarkovChain:
                     break
                 output += word
 
+            key = word
             # handles edge cases where the encountered word isn't in the chain
             # or the provided word doesn't have any associated follow ups
-            if word not in self.chain or len(self.chain[word]) == 0:
-                word = "END" if len(self.chain["END"]) > 0 else "START"
-
-            key = word
+            if key not in self.chain or len(self.chain[key]) == 0:
+                key = "END" if len(self.chain["END"]) > 0 else "START"
             count += 1
 
         return output[1:]
