@@ -15,9 +15,7 @@ todo:
 class MarkovChain:
     alphas = re.compile(r'([.!?:;,]+)')
 
-    def __init__(self, filename, precision):
-        words = self.readFile(filename)
-
+    def __init__(self, words, precision):
         keys = (' '.join(self.alphas.split(words))).split()
         
         self.chain = {
@@ -33,17 +31,6 @@ class MarkovChain:
                 self.chain["START"].append(word)
                 self.chain["END"].append(keys[i])
             self.chain[keys[i]].append(word)
-
-    def readFile(self, filename):
-        path = os.path.abspath(__file__)
-        scr_name = os.path.basename(__file__)
-        try:
-            with open(path.replace(scr_name, filename), 'r', encoding="utf-8") as f:
-                words = f.read()
-        except FileNotFoundError as fne:
-            print("File error: {0}".format(fne))
-            raise
-        return words
 
     def generate(self, length):
         key = "START"
@@ -62,7 +49,7 @@ class MarkovChain:
                 key = "END" if len(self.chain["END"]) > 0 else "START"
             count += 1
 
-        return output
+        return output[1:]
 
 def run(args):
     if args is None:
@@ -75,8 +62,20 @@ def run(args):
     wordcount = int(args[1]) if len(args) >= 2 else 30
     precision = int(args[2]) if len(args) >= 3 else 1
 
-    chain = MarkovChain(filename, precision)
+    words = readFile(filename)
+    chain = MarkovChain(words, precision)
     print(chain.generate(wordcount))
+
+def readFile(filename):
+    path = os.path.abspath(__file__)
+    scr_name = os.path.basename(__file__)
+    try:
+        with open(path.replace(scr_name, filename), 'r', encoding="utf-8") as f:
+            words = f.read()
+    except FileNotFoundError as fne:
+        print("File error: {0}".format(fne))
+        exit(1337)
+    return words
 
 if __name__ == "__main__":
     import sys
