@@ -17,7 +17,7 @@ todo:
 class MarkovChain:
     # alpha characters mark the end of a sentence structure
     # these are also handled differently when building the output
-    alphas = re.compile(r'([.!?:;,]+)')
+    alphas = re.compile(r'([.!?:;,-]+)')
 
     def __init__(self, words, precision):
         keys = (' '.join(self.alphas.split(words))).split()
@@ -53,7 +53,7 @@ class MarkovChain:
             # or the provided word doesn't have any associated follow ups
             if key not in self.chain or len(self.chain[key]) == 0:
                 key = "END" if len(self.chain["END"]) > 0 else "START"
-
+            
         result = ''.join(output)
         if re.match(r'^[\W]', result):
             result = result[1:]
@@ -91,7 +91,7 @@ def run(args):
 
     chain = MarkovChain(words, precision)
     result = chain.generate(wordcount)
-    print("text containing {} words generated with {} precision:\n{}".format(wordcount, precision, result))
+    print("text containing ~{} words generated with {} precision:\n{}".format(wordcount, precision, result))
 
 def readFile(filename):
     path = os.path.abspath(__file__)
