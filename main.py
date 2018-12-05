@@ -1,97 +1,34 @@
-import re, os
-from random import randint
+import re, os, random
 
-DEFAULT_FILENAME = "lamotte.txt"
-DEFAULT_WORDCOUNT = 30
-DEFAULT_PRECISION = 1
+DEFAULT_FILENAME = "trump.txt"
+DEFAULT_WORDCOUNT = 50
+DEFAULT_PRECISION = 3
 
-'''
-todo:
-* implement precision
-* add twitter functionality
-* clean up code:
-    * add some neat exception handling
-    * implement proper flags
-    * comment
-'''
 class MarkovChain:
-    # alpha characters mark the end of a sentence structure
-    # these are also handled differently when building the output
-    alphas = re.compile(r'([.!?:;,-]+)')
+    alphas = re.compile(r'([!.:;,?-])')
 
     def __init__(self, words, precision):
-        keys = (' '.join(self.alphas.split(words))).split()
-        
-        self.chain = {
-            "START": [keys[0]],
-            "END": []
-        }
-        
-        for i in range(len(keys)-1):
-            word = keys[i+1]
-            if keys[i] not in self.chain:
-                self.chain[keys[i]] = []
-            if self.alphas.match(keys[i]):
-                self.chain["START"].append(word)
-                self.chain["END"].append(keys[i])
-            self.chain[keys[i]].append(word)
+        self.prec = precision
+        keys = words.split()
+        self.chain = {}
+        for i in range(len(keys)-precision):
+            jump = i+precision
+            key = ' '.join(keys[i:jump])
+            if key not in self.chain:
+                self.chain[key] = []
+            self.chain[key].append(keys[jump])
 
     def generate(self, length):
-        key = "START"
-        output = []
-        while(len(output) < length):
-            word = self.chain[key][randint(0, len(self.chain[key]) - 1)]
+        words = [self.get_random()]
+        for i in range(length):
+            key = ' '.join(words[i:i+self.prec])
+            if key not in self.chain:
+                key = self.get_random()
+            words.append(random.choice(self.chain[key]))
+        return ' '.join(words)
 
-            # makes sure there's no spacing before an alpha
-            if not self.alphas.match(word):
-                output.append(" " + word)
-            else:
-                output.append(word)
-
-            key = word
-            # handles edge cases where the encountered word isn't in the chain
-            # or the provided word doesn't have any associated follow ups
-            if key not in self.chain or len(self.chain[key]) == 0:
-                key = "END" if len(self.chain["END"]) > 0 else "START"
-            
-        result = ''.join(output)
-        if re.match(r'^[\W]', result):
-            result = result[1:]
-        return result
-
-def run(args):
-    if args is None:
-        print("usage: {} <filename>, <word count>, <precision>".format(__file__))
-        exit(1337)
-    if type(args) is not list:
-        args = [args]
-
-    try:
-        wordcount = int(args[1]) if len(args) >= 2 else DEFAULT_WORDCOUNT
-        if wordcount <= 0:
-            wordcount = DEFAULT_WORDCOUNT
-    except ValueError as ve:
-        print("ValueError ({}) caught, setting wordcount to {}".format(ve, DEFAULT_WORDCOUNT))
-        wordcount = DEFAULT_WORDCOUNT
-
-    try:
-        precision = int(args[2]) if len(args) >= 3 else DEFAULT_PRECISION
-        if precision <= 0:
-            precision = DEFAULT_PRECISION
-    except ValueError as ve:
-        print("ValueError ({}) caught, setting precision to {}}".format(ve, DEFAULT_PRECISION))
-        precision = DEFAULT_PRECISION
-
-    filename = args[0] if len(args) >= 1 else DEFAULT_FILENAME
-    try:
-        words = readFile(filename)
-    except FileNotFoundError as fne:
-        print("FileNotFoundError ({}) caught, setting filename to {}".format(fne, DEFAULT_FILENAME))
-        words = readFile(DEFAULT_FILENAME)
-
-    chain = MarkovChain(words, precision)
-    result = chain.generate(wordcount)
-    print("text containing ~{} words generated with {} precision:\n{}".format(wordcount, precision, result))
+    def get_random(self):
+        return random.choice(list(self.chain.keys()))
 
 def readFile(filename):
     path = os.path.abspath(__file__)
@@ -100,6 +37,43 @@ def readFile(filename):
         words = f.read()
     return words
 
+def handleFlags(args):
+    try:
+        wordcount = int(args[1]) if len(args) >= 2 else DEFAULT_WORDCOUNT
+        if wordcount <= 0:
+            wordcount = DEFAULT_WORDCOUNT
+    except ValueError as ve:
+        wordcount = DEFAULT_WORDCOUNT
+
+    try:
+        precision = int(args[2]) if len(args) >= 3 else DEFAULT_PRECISION
+        if precision <= 0:
+            precision = DEFAULT_PRECISION
+    except ValueError as ve:
+        precision = DEFAULT_PRECISION
+
+    filename = args[0] if len(args) >= 1 else DEFAULT_FILENAME
+
+    return wordcount, precision, filename
+
+def main(args):
+    if args is None:
+        print("usage: {} <filename>, <word count>, <precision>".format(__file__))
+        exit(1337)
+    if type(args) is not list:
+        args = [args]
+
+    wc, prec, fn = handleFlags(args)
+
+    try:
+        words = readFile(fn)
+    except FileNotFoundError as fne:
+        words = readFile(DEFAULT_FILENAME)
+
+    chain = MarkovChain(words, prec)
+    result = chain.generate(wc)
+    print(result)
+
 if __name__ == "__main__":
     import sys
-    run(sys.argv[1:])
+    main(sys.argv[1:])
